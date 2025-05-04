@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documind-celery-worker
+  namespace: documind
+  labels:
+    app: documind-celery-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: documind-celery-worker
+  template:
+    metadata:
+      labels:
+        app: documind-celery-worker
+    spec:
+      containers:
+        - name: celery-worker
+          image: documind-celery:latest
+          imagePullPolicy: IfNotPresent
+          command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency=4"]
+          envFrom:
+            - configMapRef:
+                name: documind-config
+            - secretRef:
+                name: documind-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+          volumeMounts:
+            - name: media
+              mountPath: /app/media
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: documind-media-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documind-celery-beat
+  namespace: documind
+  labels:
+    app: documind-celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: documind-celery-beat
+  template:
+    metadata:
+      labels:
+        app: documind-celery-beat
+    spec:
+      containers:
+        - name: celery-beat
+          image: documind-celery:latest
+          imagePullPolicy: IfNotPresent
+          command: ["celery", "-A", "config", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+          envFrom:
+            - configMapRef:
+                name: documind-config
+            - secretRef:
+                name: documind-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "250m"
+              memory: "512Mi"
