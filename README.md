@@ -6,7 +6,6 @@
 ![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![Django 5.1](https://img.shields.io/badge/django-5.1-092E20?logo=django&logoColor=white)
 ![LangGraph](https://img.shields.io/badge/langgraph-0.2-1C3C3C?logo=langchain&logoColor=white)
-![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)
 
 A production-grade **RAG (Retrieval-Augmented Generation)** platform built with Django, LangChain, LangGraph, and Qdrant. Upload documents, ask questions, and get AI-powered answers with source citations — powered by a multi-agent architecture that routes queries to specialist agents.
 
@@ -14,50 +13,32 @@ A production-grade **RAG (Retrieval-Augmented Generation)** platform built with 
 
 ## Architecture
 
+### Request & Agent Flow
+
 ```mermaid
-graph TB
+graph LR
     subgraph Client["Client Layer"]
         REST["REST API Client"]
         WS["WebSocket Client"]
     end
 
     subgraph Django["Django Application"]
-        DRF["Django REST Framework<br/><i>JWT Auth · Rate Limiting · API Keys</i>"]
-        Channels["Django Channels<br/><i>WebSocket Streaming</i>"]
+        DRF["DRF · JWT Auth · Rate Limiting"]
+        Channels["Django Channels · WebSocket"]
     end
 
     subgraph Agents["LangGraph Multi-Agent System"]
-        Router["Router Node<br/><i>Query Analysis & Classification</i>"]
-        Retriever["Retriever Node<br/><i>Hybrid Search + Re-ranking</i>"]
-
-        subgraph Specialists["Specialist Agents"]
-            QA["QA Agent<br/><i>Factual Answers</i>"]
-            Research["Research Agent<br/><i>Multi-source Synthesis</i>"]
-            Summarise["Summarise Agent<br/><i>Document Summaries</i>"]
-            Analyse["Analyse Agent<br/><i>Comparative Analysis</i>"]
-        end
-    end
-
-    subgraph Processing["Async Processing"]
-        Celery["Celery Workers<br/><i>Document Ingestion</i>"]
-        Beat["Celery Beat<br/><i>Scheduled Tasks</i>"]
-    end
-
-    subgraph Storage["Data Layer"]
-        PG["PostgreSQL 16<br/><i>Users · Documents · Conversations</i>"]
-        Qdrant["Qdrant<br/><i>Vector Embeddings</i>"]
-        Redis["Redis<br/><i>Cache · Sessions · Channels</i>"]
+        Router["Router Node"]
+        Retriever["Retriever Node"]
+        QA["QA Agent"]
+        Research["Research Agent"]
+        Summarise["Summarise Agent"]
+        Analyse["Analyse Agent"]
     end
 
     subgraph LLM["LLM Providers"]
-        Azure["Azure OpenAI<br/><i>GPT-4o</i>"]
-        Bedrock["AWS Bedrock<br/><i>Claude 3.5 Sonnet</i>"]
-    end
-
-    subgraph Infra["Infrastructure"]
-        K8s["Kubernetes<br/><i>HPA · Ingress · TLS</i>"]
-        Prom["Prometheus<br/><i>Metrics Collection</i>"]
-        Graf["Grafana<br/><i>Dashboards</i>"]
+        Azure["Azure OpenAI · GPT-4o"]
+        Bedrock["AWS Bedrock · Claude 3.5"]
     end
 
     REST --> DRF
@@ -69,31 +50,76 @@ graph TB
     Retriever --> Research
     Retriever --> Summarise
     Retriever --> Analyse
-    Retriever --> Qdrant
     QA & Research & Summarise & Analyse --> LLM
-    DRF --> Celery
-    Celery --> PG
-    Celery --> Qdrant
-    Beat --> Celery
-    DRF --> PG
-    Channels --> Redis
-    Prom --> Graf
 
     classDef client fill:#e1f5fe,stroke:#0288d1,color:#01579b
     classDef django fill:#e8f5e9,stroke:#388e3c,color:#1b5e20
     classDef agent fill:#fff3e0,stroke:#f57c00,color:#e65100
-    classDef storage fill:#f3e5f5,stroke:#7b1fa2,color:#4a148c
     classDef llm fill:#fce4ec,stroke:#c62828,color:#b71c1c
-    classDef infra fill:#eceff1,stroke:#546e7a,color:#263238
-    classDef processing fill:#e0f2f1,stroke:#00897b,color:#004d40
 
     class REST,WS client
     class DRF,Channels django
     class Router,Retriever,QA,Research,Summarise,Analyse agent
-    class PG,Qdrant,Redis storage
     class Azure,Bedrock llm
-    class K8s,Prom,Graf infra
+```
+
+### Data & Async Processing
+
+```mermaid
+graph LR
+    subgraph Django["Django Application"]
+        DRF["Django REST Framework"]
+        Channels["Django Channels"]
+    end
+
+    subgraph Processing["Async Processing"]
+        Celery["Celery Workers · Ingestion"]
+        Beat["Celery Beat · Scheduled Tasks"]
+    end
+
+    subgraph Storage["Data Layer"]
+        PG["PostgreSQL 16"]
+        Qdrant["Qdrant · Vector Embeddings"]
+        Redis["Redis · Cache · Sessions"]
+    end
+
+    DRF --> Celery
+    DRF --> PG
+    Beat --> Celery
+    Celery --> PG
+    Celery --> Qdrant
+    Channels --> Redis
+
+    classDef django fill:#e8f5e9,stroke:#388e3c,color:#1b5e20
+    classDef processing fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef storage fill:#f3e5f5,stroke:#7b1fa2,color:#4a148c
+
+    class DRF,Channels django
     class Celery,Beat processing
+    class PG,Qdrant,Redis storage
+```
+
+### Infrastructure & Monitoring
+
+```mermaid
+graph LR
+    subgraph Infra["Infrastructure"]
+        K8s["Kubernetes · HPA · Ingress · TLS"]
+    end
+
+    subgraph Monitoring["Observability"]
+        Prom["Prometheus · Metrics"]
+        Graf["Grafana · Dashboards"]
+    end
+
+    K8s --> Prom
+    Prom --> Graf
+
+    classDef infra fill:#eceff1,stroke:#546e7a,color:#263238
+    classDef monitoring fill:#fff3e0,stroke:#f57c00,color:#e65100
+
+    class K8s infra
+    class Prom,Graf monitoring
 ```
 
 ## Key Features
@@ -327,7 +353,3 @@ pytest --cov=apps --cov=core --cov-report=html
 ```
 
 </details>
-
-## License
-
-[MIT](LICENSE)
